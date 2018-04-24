@@ -1,28 +1,52 @@
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
 pipeline {
-    agent any
-    tools {
-        maven 'Maven 3.3.9'
-        jdk 'jdk8'
+  agent {
+    dockerfile {
+      filename 'docker/Dockerfile'
     }
-    stages {
-        stage ('Initialize') {
-            steps {
-                sh '''
-                    echo "PATH = ${PATH}"
-                    echo "M2_HOME = ${M2_HOME}"
-                '''
-            }
-        }
-
-        stage ('Build') {
-            steps {
-                sh 'mvn -Dmaven.test.failure.ignore=true install' 
-            }
-            post {
-                success {
-                    junit 'target/surefire-reports/**/*.xml' 
-                }
-            }
-        }
+    
+  }
+  stages {
+    stage('compile') {
+      steps {
+        sh 'mvn clean install'
+      }
     }
+    stage('archive') {
+      steps {
+        parallel(
+          "Junit": {
+            junit 'target/surefire-reports/*.xml'
+            
+          },
+          "Archive": {
+            archiveArtifacts(artifacts: 'target/Nadia.jar', onlyIfSuccessful: true, fingerprint: true)
+            archiveArtifacts(artifacts: 'target/Nadia*javadoc.jar', fingerprint: true)
+            
+          }
+        )
+      }
+    }
+  }
 }
